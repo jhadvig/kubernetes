@@ -280,6 +280,7 @@ func executeAPIRequest(method string, s *kube_client.Client) bool {
 	result := r.Do()
 	obj, err := result.Get()
 	if err != nil {
+		os.Remove(*authConfig)
 		glog.Fatalf("Got request error: %v\n", err)
 		return false
 	}
