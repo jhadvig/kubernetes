@@ -22,6 +22,8 @@ import (
 
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/apiserver"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/build"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/buildconfig"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/client"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/cloudprovider"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/registry/binding"
@@ -51,13 +53,15 @@ type Config struct {
 
 // Master contains state for a Kubernetes cluster master/api server.
 type Master struct {
-	podRegistry        pod.Registry
-	controllerRegistry controller.Registry
-	serviceRegistry    service.Registry
-	minionRegistry     minion.Registry
-	bindingRegistry    binding.Registry
-	storage            map[string]apiserver.RESTStorage
-	client             *client.Client
+	podRegistry         pod.Registry
+	controllerRegistry  controller.Registry
+	serviceRegistry     service.Registry
+	minionRegistry      minion.Registry
+	bindingRegistry     binding.Registry
+	buildRegistry       build.BuildRegistry
+	buildConfigRegistry buildconfig.BuildConfigRegistry
+	storage             map[string]apiserver.RESTStorage
+	client              *client.Client
 }
 
 // New returns a new instance of Master connected to the given etcdServer.
@@ -65,12 +69,14 @@ func New(c *Config) *Master {
 	etcdClient := goetcd.NewClient(c.EtcdServers)
 	minionRegistry := makeMinionRegistry(c)
 	m := &Master{
-		podRegistry:        etcd.NewRegistry(etcdClient, minionRegistry),
-		controllerRegistry: etcd.NewRegistry(etcdClient, minionRegistry),
-		serviceRegistry:    etcd.NewRegistry(etcdClient, minionRegistry),
-		bindingRegistry:    etcd.NewRegistry(etcdClient, minionRegistry),
-		minionRegistry:     minionRegistry,
-		client:             c.Client,
+		podRegistry:         etcd.NewRegistry(etcdClient, minionRegistry),
+		controllerRegistry:  etcd.NewRegistry(etcdClient, minionRegistry),
+		serviceRegistry:     etcd.NewRegistry(etcdClient, minionRegistry),
+		bindingRegistry:     etcd.NewRegistry(etcdClient, minionRegistry),
+		buildRegistry:       build.MakeEtcdRegistry(etcdClient),
+		buildConfigRegistry: buildconfig.MakeEtcdRegistry(etcdClient),
+		minionRegistry:      minionRegistry,
+		client:              c.Client,
 	}
 	m.init(c.Cloud, c.PodInfoGetter)
 	return m
@@ -119,6 +125,8 @@ func (m *Master) init(cloud cloudprovider.Interface, podInfoGetter client.PodInf
 		"replicationControllers": controller.NewRegistryStorage(m.controllerRegistry, m.podRegistry),
 		"services":               service.NewRegistryStorage(m.serviceRegistry, cloud, m.minionRegistry),
 		"minions":                minion.NewRegistryStorage(m.minionRegistry),
+		"builds":                 build.NewBuildRegistryStorage(m.buildRegistry),
+		"buildConfigs":           buildconfig.NewBuildConfigRegistryStorage(m.buildConfigRegistry),
 
 		// TODO: should appear only in scheduler API group.
 		"bindings": binding.NewBindingStorage(m.bindingRegistry),

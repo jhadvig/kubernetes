@@ -18,6 +18,7 @@ base:
     - apiserver
     - controller-manager
     - scheduler
+    - build-controller
     - nginx
 
   'roles:kubernetes-pool-vsphere':
