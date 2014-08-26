@@ -33,6 +33,7 @@ func MakeBuildController(kubeClient client.Interface, buildClient BuildInterface
 		"stiBuilderImage=%s, timeout=%d", dockerBuilderImage, dockerRegistry, stiBuilderImage, timeout)
 	bc := &BuildController{
 		kubeClient:         kubeClient,
+		buildClient:        buildClient,
 		dockerBuilderImage: dockerBuilderImage,
 		dockerRegistry:     dockerRegistry,
 		stiBuilderImage:    stiBuilderImage,
