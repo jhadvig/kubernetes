@@ -3,4 +3,5 @@
 	{% set daemon_args = "" %}
 {% endif %}
 {% set master="-master=127.0.0.1:8080" %}
-DAEMON_ARGS="{{daemon_args}} {{master}}"
+{% set docker_builder_image="-docker_builder_image=ironcladlou/docker-builder" %}
+DAEMON_ARGS="{{daemon_args}} {{master}} {{docker_builder_image}}"
