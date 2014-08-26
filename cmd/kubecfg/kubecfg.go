@@ -32,6 +32,7 @@ import (
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/build"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/build/buildapi"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/buildconfig"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/buildconfig/buildconfigapi"
 	kube_client "github.com/GoogleCloudPlatform/kubernetes/pkg/client"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/kubecfg"
@@ -378,6 +379,7 @@ func executeControllerRequest(method string, c *kube_client.Client) bool {
 func humanReadablePrinter() *kubecfg.HumanReadablePrinter {
 	printer := kubecfg.NewHumanReadablePrinter()
 	build.RegisterPrintHandlers(printer)
+	buildconfig.RegisterPrintHandlers(printer)
 	// Add Handler calls here to support additional types
 	return printer
 }
