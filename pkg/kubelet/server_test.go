@@ -27,6 +27,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"io"
 
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/util"
@@ -35,12 +36,17 @@ import (
 )
 
 type fakeKubelet struct {
-	infoFunc          func(name string) (api.PodInfo, error)
-	containerInfoFunc func(podFullName, containerName string, req *info.ContainerInfoRequest) (*info.ContainerInfo, error)
-	rootInfoFunc      func(query *info.ContainerInfoRequest) (*info.ContainerInfo, error)
-	machineInfoFunc   func() (*info.MachineInfo, error)
-	logFunc           func(w http.ResponseWriter, req *http.Request)
-	runFunc           func(podFullName, containerName string, cmd []string) ([]byte, error)
+	infoFunc           func(name string) (api.PodInfo, error)
+	containerInfoFunc  func(podFullName, containerName string, req *info.ContainerInfoRequest) (*info.ContainerInfo, error)
+	rootInfoFunc       func(query *info.ContainerInfoRequest) (*info.ContainerInfo, error)
+	machineInfoFunc    func() (*info.MachineInfo, error)
+	logFunc            func(w http.ResponseWriter, req *http.Request)
+	runFunc            func(podFullName, containerName string, cmd []string) ([]byte, error)
+	containerLogsFunc  func(containerID string, w io.Writer)  error
+}
+
+func (fk *fakeKubelet) GetKubeletContainerLogs(containerID string, w io.Writer) error {
+	return fk.containerLogsFunc(containerID, w)
 }
 
 func (fk *fakeKubelet) GetPodInfo(name string) (api.PodInfo, error) {

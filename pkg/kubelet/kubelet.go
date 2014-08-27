@@ -26,6 +26,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"io"
 
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api/validation"
@@ -667,6 +668,11 @@ func (kl *Kubelet) statsFromContainerPath(containerPath string, req *info.Contai
 		return nil, err
 	}
 	return cinfo, nil
+}
+
+// GetKubeletContainerLogs returns logs from the container
+func (kl *Kubelet) GetKubeletContainerLogs(containerID string, writer io.Writer) error {
+	return getKubeletDockerContainerLogs(kl.dockerClient, containerID, writer)
 }
 
 // GetPodInfo returns information from Docker about the containers in a pod

@@ -45,6 +45,22 @@ type Server struct {
 	mux     *http.ServeMux
 }
 
+type flushWriter struct {
+	f http.Flusher
+	w io.Writer
+}
+
+func (fw *flushWriter) Write(p []byte) (n int, err error) {
+	// Just a test if the logs are really catched
+	err = ioutil.WriteFile("/tmp/dat1", p, 0644)
+
+	n, err = fw.w.Write(p)
+	if fw.f != nil {
+		fw.f.Flush()
+	}
+	return
+}
+
 // ListenAndServeKubeletServer initializes a server to respond to HTTP network requests on the Kubelet.
 func ListenAndServeKubeletServer(host HostInterface, updates chan<- interface{}, address string, port uint) {
 	glog.Infof("Starting to listen on %s:%d", address, port)
@@ -65,6 +81,7 @@ type HostInterface interface {
 	GetContainerInfo(podFullName, containerName string, req *info.ContainerInfoRequest) (*info.ContainerInfo, error)
 	GetRootInfo(req *info.ContainerInfoRequest) (*info.ContainerInfo, error)
 	GetMachineInfo() (*info.MachineInfo, error)
+	GetKubeletContainerLogs(id string, w io.Writer) error
 	GetPodInfo(name string) (api.PodInfo, error)
 	RunInContainer(name, container string, cmd []string) ([]byte, error)
 	ServeLogs(w http.ResponseWriter, req *http.Request)
@@ -91,6 +108,7 @@ func (s *Server) InstallDefaultHandlers() {
 	s.mux.HandleFunc("/logs/", s.handleLogs)
 	s.mux.HandleFunc("/spec/", s.handleSpec)
 	s.mux.HandleFunc("/run/", s.handleRun)
+	s.mux.HandleFunc("/containerLogs", s.handleContainerLogs)
 }
 
 // error serializes an error object into an HTTP response.
@@ -142,7 +160,34 @@ func (s *Server) handleContainers(w http.ResponseWriter, req *http.Request) {
 
 }
 
-// handlePodInfo handles podInfo requests against the Kubelet.
+// handleContainerLogs handles containerLogs request againts the Kubelet
+func (s *Server) handleContainerLogs(w http.ResponseWriter, req *http.Request) {
+	fw := flushWriter{w: w}
+	defer req.Body.Close()
+	u, err := url.ParseRequestURI(req.RequestURI)
+	if err != nil {
+		s.error(w, err)
+		return
+	}
+	containerID := u.Query().Get("containerID")
+	if len(containerID) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Missing 'containerID=' query entry.", http.StatusBadRequest)
+		return
+	}
+
+	if f, ok := w.(http.Flusher); ok {
+		fw.f = f
+	}
+	err = s.host.GetKubeletContainerLogs(containerID, &fw)
+
+	if err != nil {
+		s.error(w, err)
+		return
+	}
+}
+
+// handlePodInfo handles podInfo requests against the Kubelet
 func (s *Server) handlePodInfo(w http.ResponseWriter, req *http.Request) {
 	u, err := url.ParseRequestURI(req.RequestURI)
 	if err != nil {
