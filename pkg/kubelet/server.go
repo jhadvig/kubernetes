@@ -64,6 +64,7 @@ type HostInterface interface {
 	GetContainerInfo(podFullName, containerName string, req *info.ContainerInfoRequest) (*info.ContainerInfo, error)
 	GetRootInfo(req *info.ContainerInfoRequest) (*info.ContainerInfo, error)
 	GetMachineInfo() (*info.MachineInfo, error)
+	GetKubeletContainerLogs(id string) ([]byte, error)
 	GetPodInfo(name string) (api.PodInfo, error)
 	ServeLogs(w http.ResponseWriter, req *http.Request)
 }
@@ -88,6 +89,7 @@ func (s *Server) InstallDefaultHandlers() {
 	s.mux.HandleFunc("/stats/", s.handleStats)
 	s.mux.HandleFunc("/logs/", s.handleLogs)
 	s.mux.HandleFunc("/spec/", s.handleSpec)
+	s.mux.HandleFunc("/containerLogs", s.handleContainerLogs)
 }
 
 // error serializes an error object into an HTTP response
@@ -141,6 +143,30 @@ func (s *Server) handleContainers(w http.ResponseWriter, req *http.Request) {
 	}
 	s.updates <- PodUpdate{pods, SET}
 
+}
+
+// handleContainerLogs handles containerLogs request againts the Kubelet
+func (s *Server) handleContainerLogs(w http.ResponseWriter, req *http.Request) {
+	defer req.Body.Close()
+	u, err := url.ParseRequestURI(req.RequestURI)
+	if err != nil {
+		s.error(w, err)
+		return
+	}
+	containerID := u.Query().Get("containerID")
+	if len(containerID) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Missing 'containerID=' query entry.", http.StatusBadRequest)
+		return
+	}
+	data, err := s.host.GetKubeletContainerLogs(containerID)
+	if err != nil {
+		s.error(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Add("Content-type", "application/json")
+	w.Write(data)
 }
 
 // handlePodInfo handles podInfo requests against the Kubelet

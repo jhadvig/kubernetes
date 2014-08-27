@@ -35,11 +35,16 @@ import (
 )
 
 type fakeKubelet struct {
+	containersLogsFunc  func(containerID string) ([]byte, error)
 	infoFunc          func(name string) (api.PodInfo, error)
 	containerInfoFunc func(podFullName, containerName string, req *info.ContainerInfoRequest) (*info.ContainerInfo, error)
 	rootInfoFunc      func(query *info.ContainerInfoRequest) (*info.ContainerInfo, error)
 	machineInfoFunc   func() (*info.MachineInfo, error)
 	logFunc           func(w http.ResponseWriter, req *http.Request)
+}
+
+func (fk *fakeKubelet) GetKubeletContainerLogs(containerID string) ([]byte, error) {
+	return fk.containersLogsFunc(containerID)
 }
 
 func (fk *fakeKubelet) GetPodInfo(name string) (api.PodInfo, error) {

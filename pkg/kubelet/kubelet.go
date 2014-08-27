@@ -693,6 +693,11 @@ func (kl *Kubelet) statsFromContainerPath(containerPath string, req *info.Contai
 	return cinfo, nil
 }
 
+// GetKubeletContainerLogs returns logs from the container
+func (kl *Kubelet) GetKubeletContainerLogs(containerID string) ([]byte, error) {
+	return getKubeletDockerContainerLogs(kl.dockerClient, containerID)
+}
+
 // GetPodInfo returns information from Docker about the containers in a pod
 func (kl *Kubelet) GetPodInfo(podFullName string) (api.PodInfo, error) {
 	return getDockerPodInfo(kl.dockerClient, podFullName)

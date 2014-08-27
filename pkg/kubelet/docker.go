@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"bytes"
 
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
 	"github.com/fsouza/go-dockerclient"
@@ -46,6 +47,7 @@ type DockerInterface interface {
 	StopContainer(id string, timeout uint) error
 	PullImage(opts docker.PullImageOptions, auth docker.AuthConfiguration) error
 	RemoveContainer(opts docker.RemoveContainerOptions) error
+	Logs(opts docker.LogsOptions) error
 }
 
 // DockerID is an ID of docker container. It is a type to make it clear when we're working with docker container Ids
@@ -149,6 +151,27 @@ func getKubeletDockerContainers(client DockerInterface, listAll bool) (DockerCon
 		result[DockerID(container.ID)] = container
 	}
 	return result, nil
+}
+
+// GetKubeletDockerContainerLogs returns logs of specific container
+func getKubeletDockerContainerLogs(client DockerInterface, containerID string) ([]byte, error) {
+	var buf bytes.Buffer
+	logs_header := fmt.Sprintf("Container %s logs:\n", containerID)
+	buf.WriteString(logs_header)
+	err := client.Logs(docker.LogsOptions{
+		Container:    containerID,
+		Stdout:       true,
+		Stderr:       true,
+		OutputStream: &buf,
+		ErrorStream:  &buf,
+		Timestamps:   true,
+		RawTerminal:  true,
+	})
+	data := buf.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // ErrNoContainersInPod is returned when there are no running containers for a given pod

@@ -103,6 +103,15 @@ func (f *FakeDockerClient) RemoveContainer(opts docker.RemoveContainerOptions) e
 	return f.err
 }
 
+// StartContainer is a test-spy implementation of DockerInterface.Logs.
+// It adds an entry "logs" to the internal method call record.
+func (f *FakeDockerClient) Logs(opts docker.LogsOptions) error {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	f.called = append(f.called, "logs")
+	return f.err
+}
+
 // PullImage is a test-spy implementation of DockerInterface.StopContainer.
 // It adds an entry "pull" to the internal method call record.
 func (f *FakeDockerClient) PullImage(opts docker.PullImageOptions, auth docker.AuthConfiguration) error {
