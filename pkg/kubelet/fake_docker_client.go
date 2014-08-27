@@ -99,6 +99,15 @@ func (f *FakeDockerClient) StopContainer(id string, timeout uint) error {
 	return f.err
 }
 
+// Logs is a test-spy implementation of DockerInterface.Logs.
+// It adds an entry "logs" to the internal method call record.
+func (f *FakeDockerClient) Logs(opts docker.LogsOptions) error {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	f.called = append(f.called, "logs")
+	return f.err
+}
+
 // PullImage is a test-spy implementation of DockerInterface.StopContainer.
 // It adds an entry "pull" to the internal method call record.
 func (f *FakeDockerClient) PullImage(opts docker.PullImageOptions, auth docker.AuthConfiguration) error {
