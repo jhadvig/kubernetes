@@ -156,8 +156,6 @@ func getKubeletDockerContainers(client DockerInterface, listAll bool) (DockerCon
 // GetKubeletDockerContainerLogs returns logs of specific container
 func getKubeletDockerContainerLogs(client DockerInterface, containerID string) ([]byte, error) {
 	var buf bytes.Buffer
-	logs_header := fmt.Sprintf("Container %s logs:\n", containerID)
-	buf.WriteString(logs_header)
 	err := client.Logs(docker.LogsOptions{
 		Container:    containerID,
 		Stdout:       true,

@@ -24,6 +24,7 @@ import (
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/apiserver"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/build"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/buildconfig"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/buildlog"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/client"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/cloudprovider"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/registry/binding"
@@ -127,6 +128,7 @@ func (m *Master) init(cloud cloudprovider.Interface, podInfoGetter client.PodInf
 		"minions":                minion.NewRegistryStorage(m.minionRegistry),
 		"builds":                 build.NewBuildRegistryStorage(m.buildRegistry),
 		"buildConfigs":           buildconfig.NewBuildConfigRegistryStorage(m.buildConfigRegistry),
+		"buildLogs":              buildlog.NewBuildLogRegistryStorage(m.buildRegistry, m.podRegistry),
 
 		// TODO: should appear only in scheduler API group.
 		"bindings": binding.NewBindingStorage(m.bindingRegistry),

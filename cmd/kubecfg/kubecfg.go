@@ -33,6 +33,8 @@ import (
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/build"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/build/buildapi"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/buildconfig/buildconfigapi"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/buildlog"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/buildlog/buildlogapi"
 	kube_client "github.com/GoogleCloudPlatform/kubernetes/pkg/client"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/kubecfg"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/util"
@@ -67,6 +69,7 @@ var parser = kubecfg.NewParser(map[string]interface{}{
 	"minions":                api.Minion{},
 	"buildConfigs":           buildconfigapi.BuildConfig{},
 	"builds":                 buildapi.Build{},
+	"buildLogs":              buildlogapi.BuildLog{},
 })
 
 func usage() {
@@ -378,6 +381,7 @@ func executeControllerRequest(method string, c *kube_client.Client) bool {
 func humanReadablePrinter() *kubecfg.HumanReadablePrinter {
 	printer := kubecfg.NewHumanReadablePrinter()
 	build.RegisterPrintHandlers(printer)
+	buildlog.RegisterPrintHandlers(printer)
 	// Add Handler calls here to support additional types
 	return printer
 }
