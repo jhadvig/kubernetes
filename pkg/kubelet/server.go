@@ -83,7 +83,7 @@ type HostInterface interface {
 	GetContainerInfo(podFullName, containerName string, req *info.ContainerInfoRequest) (*info.ContainerInfo, error)
 	GetRootInfo(req *info.ContainerInfoRequest) (*info.ContainerInfo, error)
 	GetMachineInfo() (*info.MachineInfo, error)
-	GetKubeletContainerLogs(id string, w io.Writer) error
+	GetKubeletContainerLogs(logParams logParameters, w io.Writer) error
 	GetPodInfo(name string) (api.PodInfo, error)
 	RunInContainer(name, container string, cmd []string) ([]byte, error)
 	ServeLogs(w http.ResponseWriter, req *http.Request)
@@ -162,6 +162,13 @@ func (s *Server) handleContainers(w http.ResponseWriter, req *http.Request) {
 
 }
 
+type logParameters struct {
+	containerID  string
+	follow       bool
+	tail         string
+}
+
+
 // handleContainerLogs handles containerLogs request againts the Kubelet
 func (s *Server) handleContainerLogs(w http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
@@ -170,8 +177,16 @@ func (s *Server) handleContainerLogs(w http.ResponseWriter, req *http.Request) {
 		s.error(w, err)
 		return
 	}
-	containerID := u.Query().Get("containerID")
-	if len(containerID) == 0 {
+
+	uriValues := u.Query()
+
+	logParams := logParameters{
+		containerID: uriValues.Get("containerID"),
+		follow: uriValues.Get("follow") == "true",
+		tail: uriValues.Get("tail"),
+	}
+
+	if len(logParams.containerID) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		http.Error(w, "Missing 'containerID=' query entry.", http.StatusBadRequest)
 		return
@@ -188,7 +203,7 @@ func (s *Server) handleContainerLogs(w http.ResponseWriter, req *http.Request) {
 	logWriter.Header().Set("Transfer-Encoding", "chunked")
 	logWriter.WriteHeader(http.StatusOK)
 
-	err = s.host.GetKubeletContainerLogs(containerID, &fw)
+	err = s.host.GetKubeletContainerLogs(logParams, &fw)
 
 	if err != nil {
 		s.error(w, err)

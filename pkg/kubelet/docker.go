@@ -153,16 +153,22 @@ func getKubeletDockerContainers(client DockerInterface) (DockerContainers, error
 }
 
 // GetKubeletDockerContainerLogs returns logs of specific container
-func getKubeletDockerContainerLogs(client DockerInterface, containerID string, writer io.Writer) error {
-	err := client.Logs(docker.LogsOptions{
-		Container:    containerID,
+func getKubeletDockerContainerLogs(client DockerInterface, logParams logParameters, writer io.Writer) error {
+	opts := docker.LogsOptions{
+		Container:    logParams.containerID,
 		Stdout:       true,
 		Stderr:       true,
 		OutputStream: writer,
 		ErrorStream:  writer,
 		Timestamps:   true,
 		RawTerminal:  true,
-	})
+	}
+	if logParams.follow == true {
+		opts.Follow = true
+	} else 	if logParams.tail != "" {
+		opts.Tail = logParams.tail
+	}
+	err := client.Logs(opts)
 	if err != nil {
 		return err
 	}
