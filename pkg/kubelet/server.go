@@ -45,18 +45,20 @@ type Server struct {
 	mux     *http.ServeMux
 }
 
+// flusherWriter provides wrapper for responseWriter with HTTP streaming capabilities
 type flushWriter struct {
-	f http.Flusher
-	w io.Writer
+	flusher http.Flusher
+	writer io.Writer
 }
 
+// Write is a flushWriter implementation of the io.Writer that sends any buffered data to the client.
 func (fw *flushWriter) Write(p []byte) (n int, err error) {
-	n, err = fw.w.Write(p)
+	n, err = fw.writer.Write(p)
 	if err != nil {
 		return n, err
 	}
-	if fw.f != nil {
-		fw.f.Flush()
+	if fw.flusher != nil {
+		fw.flusher.Flush()
 	}
 	return
 }
@@ -175,16 +177,16 @@ func (s *Server) handleContainerLogs(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	loggedW := httplog.LogOf(w)
+	logWriter := httplog.LogOf(w)
 	w = httplog.Unlogged(w)
-	fw := flushWriter{w: w}
+	fw := flushWriter{writer: w}
 
 	if flusher, ok := w.(http.Flusher); ok {
-		fw.f = flusher
+		fw.flusher = flusher
 	}
 
-	loggedW.Header().Set("Transfer-Encoding", "chunked")
-	loggedW.WriteHeader(http.StatusOK)
+	logWriter.Header().Set("Transfer-Encoding", "chunked")
+	logWriter.WriteHeader(http.StatusOK)
 
 	err = s.host.GetKubeletContainerLogs(containerID, &fw)
 
