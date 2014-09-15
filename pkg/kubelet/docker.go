@@ -152,27 +152,28 @@ func getKubeletDockerContainers(client DockerInterface) (DockerContainers, error
 	return result, nil
 }
 
-// GetKubeletDockerContainerLogs returns logs of specific container
-func getKubeletDockerContainerLogs(client DockerInterface, logParams logParameters, writer io.Writer) error {
+// getKubeletDockerContainerLogs returns logs of specific container
+// By default the function will return snapshot of the container log
+// Log streaming is possible if 'follow' param is set to true
+// Log tailing is possible when number of tailed lines are set and only if 'follow' is false
+func getKubeletDockerContainerLogs(client DockerInterface, containerID, tail string, follow bool, writer io.Writer) (err error) {
 	opts := docker.LogsOptions{
-		Container:    logParams.containerID,
+		Container:    containerID,
 		Stdout:       true,
 		Stderr:       true,
 		OutputStream: writer,
 		ErrorStream:  writer,
 		Timestamps:   true,
 		RawTerminal:  true,
+		Follow:       follow,
 	}
-	if logParams.follow == true {
-		opts.Follow = true
-	} else 	if logParams.tail != "" {
-		opts.Tail = logParams.tail
+
+	if !follow {
+		opts.Tail = tail
 	}
-	err := client.Logs(opts)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	err = client.Logs(opts)
+	return
 }
 
 // ErrNoContainersInPod is returned when there are no running containers for a given pod

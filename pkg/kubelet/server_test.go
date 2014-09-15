@@ -42,11 +42,7 @@ type fakeKubelet struct {
 	machineInfoFunc    func() (*info.MachineInfo, error)
 	logFunc            func(w http.ResponseWriter, req *http.Request)
 	runFunc            func(podFullName, containerName string, cmd []string) ([]byte, error)
-	containerLogsFunc  func(logParams logParameters, w io.Writer)  error
-}
-
-func (fk *fakeKubelet) GetKubeletContainerLogs(logParams logParameters, w io.Writer) error {
-	return fk.containerLogsFunc(logParams, w)
+	containerLogsFunc  func(containerID, tail string, follow bool, writer io.Writer)  error
 }
 
 func (fk *fakeKubelet) GetPodInfo(name string) (api.PodInfo, error) {
@@ -67,6 +63,10 @@ func (fk *fakeKubelet) GetMachineInfo() (*info.MachineInfo, error) {
 
 func (fk *fakeKubelet) ServeLogs(w http.ResponseWriter, req *http.Request) {
 	fk.logFunc(w, req)
+}
+
+func (fk *fakeKubelet) GetKubeletContainerLogs(containerID, tail string, follow bool, writer io.Writer) error {
+	return fk.containerLogsFunc(containerID, tail, follow, writer)
 }
 
 func (fk *fakeKubelet) RunInContainer(podFullName, containerName string, cmd []string) ([]byte, error) {

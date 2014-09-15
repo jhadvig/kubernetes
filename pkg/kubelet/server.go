@@ -45,17 +45,17 @@ type Server struct {
 	mux     *http.ServeMux
 }
 
-// flusherWriter provides wrapper for responseWriter with HTTP streaming capabilities
-type flushWriter struct {
+// FlusherWriter provides wrapper for responseWriter with HTTP streaming capabilities
+type FlushWriter struct {
 	flusher http.Flusher
 	writer io.Writer
 }
 
-// Write is a flushWriter implementation of the io.Writer that sends any buffered data to the client.
-func (fw *flushWriter) Write(p []byte) (n int, err error) {
+// Write is a FlushWriter implementation of the io.Writer that sends any buffered data to the client.
+func (fw *FlushWriter) Write(p []byte) (n int, err error) {
 	n, err = fw.writer.Write(p)
 	if err != nil {
-		return n, err
+		return
 	}
 	if fw.flusher != nil {
 		fw.flusher.Flush()
@@ -83,7 +83,7 @@ type HostInterface interface {
 	GetContainerInfo(podFullName, containerName string, req *info.ContainerInfoRequest) (*info.ContainerInfo, error)
 	GetRootInfo(req *info.ContainerInfoRequest) (*info.ContainerInfo, error)
 	GetMachineInfo() (*info.MachineInfo, error)
-	GetKubeletContainerLogs(logParams logParameters, w io.Writer) error
+	GetKubeletContainerLogs(containerID, tail string, follow bool, writer io.Writer) error
 	GetPodInfo(name string) (api.PodInfo, error)
 	RunInContainer(name, container string, cmd []string) ([]byte, error)
 	ServeLogs(w http.ResponseWriter, req *http.Request)
@@ -162,14 +162,7 @@ func (s *Server) handleContainers(w http.ResponseWriter, req *http.Request) {
 
 }
 
-type logParameters struct {
-	containerID  string
-	follow       bool
-	tail         string
-}
-
-
-// handleContainerLogs handles containerLogs request againts the Kubelet
+// handleContainerLogs handles containerLogs request against the Kubelet
 func (s *Server) handleContainerLogs(w http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 	u, err := url.ParseRequestURI(req.RequestURI)
@@ -179,32 +172,22 @@ func (s *Server) handleContainerLogs(w http.ResponseWriter, req *http.Request) {
 	}
 
 	uriValues := u.Query()
-
-	logParams := logParameters{
-		containerID: uriValues.Get("containerID"),
-		follow: uriValues.Get("follow") == "true",
-		tail: uriValues.Get("tail"),
-	}
-
-	if len(logParams.containerID) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		http.Error(w, "Missing 'containerID=' query entry.", http.StatusBadRequest)
+	containerID := uriValues.Get("containerid")
+	if len(containerID) == 0 {
+		http.Error(w, "Missing 'containerid=' query entry.", http.StatusBadRequest)
 		return
 	}
+	follow, _ := strconv.ParseBool(uriValues.Get("follow"))
+	tail := uriValues.Get("tail")
 
-	logWriter := httplog.LogOf(w)
-	w = httplog.Unlogged(w)
-	fw := flushWriter{writer: w}
-
+	fw := FlushWriter{writer: w}
 	if flusher, ok := w.(http.Flusher); ok {
 		fw.flusher = flusher
 	}
 
-	logWriter.Header().Set("Transfer-Encoding", "chunked")
-	logWriter.WriteHeader(http.StatusOK)
-
-	err = s.host.GetKubeletContainerLogs(logParams, &fw)
-
+	w.Header().Set("Transfer-Encoding", "chunked")
+	w.WriteHeader(http.StatusOK)
+	err = s.host.GetKubeletContainerLogs(containerID, tail, follow, &fw)
 	if err != nil {
 		s.error(w, err)
 		return

@@ -671,8 +671,8 @@ func (kl *Kubelet) statsFromContainerPath(containerPath string, req *info.Contai
 }
 
 // GetKubeletContainerLogs returns logs from the container
-func (kl *Kubelet) GetKubeletContainerLogs(logParams logParameters, writer io.Writer) error {
-	return getKubeletDockerContainerLogs(kl.dockerClient, logParams, writer)
+func (kl *Kubelet) GetKubeletContainerLogs(containerID, tail string, follow bool, writer io.Writer) error {
+	return getKubeletDockerContainerLogs(kl.dockerClient, containerID, tail , follow, writer)
 }
 
 // GetPodInfo returns information from Docker about the containers in a pod
