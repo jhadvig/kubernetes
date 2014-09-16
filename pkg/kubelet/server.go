@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
+	apierrors "github.com/GoogleCloudPlatform/kubernetes/pkg/api/errors"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/healthz"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/httplog"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/kubelet/dockertools"
@@ -156,8 +157,12 @@ func (s *Server) handleContainerLogs(w http.ResponseWriter, req *http.Request) {
 
 	uriValues := u.Query()
 	containerID := uriValues.Get("containerid")
-	if len(containerID) == 0 {
-		http.Error(w, `{"message": "Missing containerID= query entry."}`, http.StatusBadRequest)
+
+	if errs := ValidateUriValues(uriValues, []string{"containerid"} ); len(errs) > 0 {
+		validErr := apierrors.NewInvalid("containerid", "Missing containerid in query entry.", errs)
+		output, _ := json.Marshal(validErr)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(output)
 		return
 	}
 	follow, _ := strconv.ParseBool(uriValues.Get("follow"))

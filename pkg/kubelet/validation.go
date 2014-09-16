@@ -17,6 +17,8 @@ limitations under the License.
 package kubelet
 
 import (
+	"net/url"
+
 	apierrs "github.com/GoogleCloudPlatform/kubernetes/pkg/api/errors"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api/validation"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/util"
@@ -28,6 +30,16 @@ func ValidatePod(pod *Pod) (errors []error) {
 	}
 	if errs := validation.ValidateManifest(&pod.Manifest); len(errs) != 0 {
 		errors = append(errors, errs...)
+	}
+	return errors
+}
+
+func ValidateUriValues(uriValues url.Values, keys []string) (errors []error) {
+	for i := range keys {
+		keyValue := uriValues.Get(keys[i])
+		if len(keyValue) == 0 {
+			errors = append(errors, apierrs.NewFieldInvalid(keys[i], uriValues.Get(keys[i]) ) )
+		}
 	}
 	return errors
 }
