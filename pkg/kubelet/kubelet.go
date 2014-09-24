@@ -754,6 +754,7 @@ func (kl *Kubelet) GetKubeletContainerLogs(podFullName, containerName, tail stri
 		return err
 	}
 	var uuid string
+	
 	dockerContainer, found, _ := dockerContainers.FindPodContainer(podFullName, uuid, containerName)
 	if !found {
 		return fmt.Errorf("container not found (%s)\n", containerName)
