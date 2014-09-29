@@ -412,7 +412,7 @@ func (kl *Kubelet) syncPod(pod *Pod, dockerContainers DockerContainers) error {
 		netID = dockerNetworkID
 		if count > 0 {
 			// relist everything, otherwise we'll think we're ok
-			dockerContainers, err = getKubeletDockerContainers(kl.dockerClient)
+			dockerContainers, err = getKubeletDockerContainers(kl.dockerClient, false)
 			if err != nil {
 				glog.Errorf("Error listing containers %#v", dockerContainers)
 				return err
@@ -545,7 +545,7 @@ func (kl *Kubelet) SyncPods(pods []Pod) error {
 	var err error
 	desiredContainers := make(map[podContainer]empty)
 
-	dockerContainers, err := getKubeletDockerContainers(kl.dockerClient)
+	dockerContainers, err := getKubeletDockerContainers(kl.dockerClient, false)
 	if err != nil {
 		glog.Errorf("Error listing containers %#v", dockerContainers)
 		return err
@@ -572,7 +572,7 @@ func (kl *Kubelet) SyncPods(pods []Pod) error {
 	}
 
 	// Kill any containers we don't need
-	existingContainers, err := getKubeletDockerContainers(kl.dockerClient)
+	existingContainers, err := getKubeletDockerContainers(kl.dockerClient, false)
 	if err != nil {
 		glog.Errorf("Error listing containers: %v", err)
 		return err
@@ -679,7 +679,7 @@ func (kl *Kubelet) GetContainerInfo(podFullName, containerName string, req *info
 	if kl.cadvisorClient == nil {
 		return nil, nil
 	}
-	dockerContainers, err := getKubeletDockerContainers(kl.dockerClient)
+	dockerContainers, err := getKubeletDockerContainers(kl.dockerClient, false)
 	if err != nil {
 		return nil, err
 	}
@@ -724,7 +724,7 @@ func (kl *Kubelet) RunInContainer(podFullName, container string, cmd []string) (
 	if kl.runner == nil {
 		return nil, fmt.Errorf("no runner specified.")
 	}
-	dockerContainers, err := getKubeletDockerContainers(kl.dockerClient)
+	dockerContainers, err := getKubeletDockerContainers(kl.dockerClient, false)
 	if err != nil {
 		return nil, err
 	}
