@@ -20,13 +20,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"path"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"io"
 
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api/validation"
@@ -466,7 +466,7 @@ func (kl *Kubelet) syncPod(pod *Pod, dockerContainers dockertools.DockerContaine
 		netID = dockerNetworkID
 		if count > 0 {
 			// relist everything, otherwise we'll think we're ok
-			dockerContainers, err = dockertools.GetKubeletDockerContainers(kl.dockerClient)
+			dockerContainers, err = dockertools.GetKubeletDockerContainers(kl.dockerClient, false)
 			if err != nil {
 				glog.Errorf("Error listing containers %#v", dockerContainers)
 				return err
@@ -624,7 +624,7 @@ func (kl *Kubelet) SyncPods(pods []Pod) error {
 	var err error
 	desiredContainers := make(map[podContainer]empty)
 
-	dockerContainers, err := dockertools.GetKubeletDockerContainers(kl.dockerClient)
+	dockerContainers, err := dockertools.GetKubeletDockerContainers(kl.dockerClient, false)
 	if err != nil {
 		glog.Errorf("Error listing containers %#v", dockerContainers)
 		return err
@@ -652,7 +652,7 @@ func (kl *Kubelet) SyncPods(pods []Pod) error {
 	}
 
 	// Kill any containers we don't need
-	existingContainers, err := dockertools.GetKubeletDockerContainers(kl.dockerClient)
+	existingContainers, err := dockertools.GetKubeletDockerContainers(kl.dockerClient, false)
 	if err != nil {
 		glog.Errorf("Error listing containers: %v", err)
 		return err
@@ -748,17 +748,21 @@ func (kl *Kubelet) statsFromContainerPath(containerPath string, req *info.Contai
 }
 
 // GetKubeletContainerLogs returns logs from the container
+// The second parameter of GetPodInfo and FindPodContainer methods represents pod UUID, which is allowed to be blank
 func (kl *Kubelet) GetKubeletContainerLogs(podFullName, containerName, tail string, follow bool, stdout, stderr io.Writer) error {
-	dockerContainers, err := dockertools.GetKubeletDockerContainers(kl.dockerClient)
+	_, err := kl.GetPodInfo(podFullName, "")
+	if err == dockertools.ErrNoContainersInPod {
+		return fmt.Errorf("Pod not found (%s)\n", podFullName)
+	}
+	dockerContainers, err := dockertools.GetKubeletDockerContainers(kl.dockerClient, true)
 	if err != nil {
 		return err
 	}
-	var uuid string
-	dockerContainer, found, _ := dockerContainers.FindPodContainer(podFullName, uuid, containerName)
+	dockerContainer, found, _ := dockerContainers.FindPodContainer(podFullName, "", containerName)
 	if !found {
-		return fmt.Errorf("container not found (%s)\n", containerName)
+		return fmt.Errorf("Container not found (%s)\n", containerName)
 	}
-	return dockertools.GetKubeletDockerContainerLogs(kl.dockerClient, dockerContainer.ID, tail , follow, stdout, stderr)
+	return dockertools.GetKubeletDockerContainerLogs(kl.dockerClient, dockerContainer.ID, tail, follow, stdout, stderr)
 }
 
 // GetPodInfo returns information from Docker about the containers in a pod
@@ -771,7 +775,7 @@ func (kl *Kubelet) GetContainerInfo(podFullName, uuid, containerName string, req
 	if kl.cadvisorClient == nil {
 		return nil, nil
 	}
-	dockerContainers, err := dockertools.GetKubeletDockerContainers(kl.dockerClient)
+	dockerContainers, err := dockertools.GetKubeletDockerContainers(kl.dockerClient, false)
 	if err != nil {
 		return nil, err
 	}
@@ -816,7 +820,7 @@ func (kl *Kubelet) RunInContainer(podFullName, uuid, container string, cmd []str
 	if kl.runner == nil {
 		return nil, fmt.Errorf("no runner specified.")
 	}
-	dockerContainers, err := dockertools.GetKubeletDockerContainers(kl.dockerClient)
+	dockerContainers, err := dockertools.GetKubeletDockerContainers(kl.dockerClient, false)
 	if err != nil {
 		return nil, err
 	}
