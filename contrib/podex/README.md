@@ -9,6 +9,7 @@ Manifests can then be edited by a human to match deployment needs.
 ## Usage
 ```
 $ podex [-json|-yaml] [-id] IMAGES
+
 $ podex -json [-id] IMAGES > pod.json
 $ podex -yaml [-id] IMAGES > pod.yaml
 ```
