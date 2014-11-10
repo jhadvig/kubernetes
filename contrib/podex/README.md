@@ -8,20 +8,6 @@ Manifests can then be edited by a human to match deployment needs.
 
 ## Usage
 ```
-$ docker pull google/nodejs-hello
-$ podex -yaml google/nodejs-hello > pod.yaml
-$ podex -json google/nodejs-hello > pod.json
-```
-
-In case of multiple images the Pod name needs to be specified by the `id` flag. The flag is optional in case of single image and will override the default Pod name which is the image basename.
-```
-$ podex -yaml -id=nodejs-nginx google/nodejs-hello nginx > pod.yaml
-```
-
-
-
-## Usage
-```
 $ podex [-json] [-id] IMAGES > pod.json
 $ podex [-yaml] [-id] IMAGES > pod.yaml
 ```
