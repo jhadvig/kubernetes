@@ -18,6 +18,21 @@ In case of multiple images the Pod name needs to be specified by the `id` flag. 
 $ podex -yaml -id=nodejs-nginx google/nodejs-hello nginx > pod.yaml
 ```
 
+
+
+## Usage
+podex [-json] [-id] IMAGES > pod.json
+podex [-yaml] [-id] IMAGES > pod.yaml
+
+### Options
+- id: set the pod name (required with multiple images, optional with single image: default to image base name)
+- json: puts the container manifest into JSON format
+- yaml: puts the container manifest into YAML format
+
+### Examples
+$ podex -json google/nodejs-hello > pod.yaml
+$ podex -yaml -id=nodejs-nginx google/nodejs-hello nginx > pod.yaml
+
 ## TODOs
 - [ ] option generate a full pod manifest (w/ `desired state`)
 - [ ] option to merge multiple container manifest into one pod
