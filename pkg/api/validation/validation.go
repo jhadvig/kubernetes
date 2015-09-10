@@ -1699,6 +1699,21 @@ func ValidateSecret(secret *api.Secret) validation.ErrorList {
 		if err := json.Unmarshal(dockercfgBytes, &map[string]interface{}{}); err != nil {
 			allErrs = append(allErrs, validation.NewInvalidError(fmt.Sprintf("data[%s]", api.DockerConfigKey), "<secret contents redacted>", err.Error()))
 		}
+	case api.SecretTypeBasicAuth:
+		_, usernameFieldExists := secret.Data[api.BasicAuthUsernameKey]
+		_, passwordFieldExists := secret.Data[api.BasicAuthPasswordKey]
+
+		// username or password might be empty, but the field must be present
+		if !usernameFieldExists && !passwordFieldExists {
+			allErrs = append(allErrs, errs.NewFieldRequired(fmt.Sprintf("data[%s]", api.BasicAuthUsernameKey)))
+			allErrs = append(allErrs, errs.NewFieldRequired(fmt.Sprintf("data[%s]", api.BasicAuthPasswordKey)))
+			break
+		}
+	case api.SecretTypeSSHAuth:
+		if len(secret.Data[api.SSHAuthPrivateKey]) == 0 {
+			allErrs = append(allErrs, errs.NewFieldRequired(fmt.Sprintf("data[%s]", api.SSHAuthPrivateKey)))
+			break
+		}
 
 	default:
 		// no-op

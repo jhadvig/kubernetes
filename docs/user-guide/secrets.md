@@ -76,6 +76,21 @@ To use a secret, a pod needs to reference the secret.
 A secret can be used with a pod in two ways: either as files in a [volume](volumes.md) mounted on one or more of
 its containers, or used by kubelet when pulling images for the pod.
 
+### Secret types
+
+Kubernetes comes up with several secret types built-in. Those are
+- kubernetes.<i></i>io/basic-auth
+  - designed to contain data needed for basic authentication
+  - `username` or `password` key is mandatory to be defined in the secret's data section
+- kubernetes.<i></i>io/ssh-auth
+  - designed for a private SSH key needed for authentication
+  - `ssh-privatekey` key is mandatory to be defined in the secret's data section
+- kubernetes.<i></i>io/dockercfg
+  - designed to contain serialized content of `.dockercfg` file
+  - `.dockercfg` key is mandatory to be defined in the secret's data section
+- Opaque
+  - designed to hold arbitrary user-defined data
+
 ### Service Accounts Automatically Create and Attach Secrets with API Credentials
 
 Kubernetes automatically creates secrets which contain credentials for
@@ -91,14 +106,14 @@ information on how Service Accounts work.
 
 ### Creating a Secret Manually
 
-This is an example of a simple secret, in yaml format:
+This is an example of a simple username/password secret, in yaml format:
 
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: mysecret
-type: Opaque
+type: kubernetes.io/basic-auth
 data:
   password: dmFsdWUtMg0K
   username: dmFsdWUtMQ0K
@@ -114,6 +129,16 @@ Create the secret using [`kubectl create`](kubectl/kubectl_create.md).
 
 Once the secret is created, you can need to modify your pod to specify
 that it should use the secret.
+
+If you desire to have any additional data stored in your secret (e.g. email
+address), just add them to `data` section in your secret description:
+
+```yaml
+data:
+  password: dmFsdWUtMg0K
+  username: dmFsdWUtMQ0K
+  email: foo@bar.baz
+```
 
 ### Manually specifying a Secret to be Mounted on a Pod
 
@@ -266,9 +291,9 @@ To create a pod that uses an ssh key stored as a secret, we first need to create
   "metadata": {
     "name": "ssh-key-secret"
   },
+  "type" : "kubernetes.io/ssh-auth",
   "data": {
-    "id-rsa": "dmFsdWUtMg0KDQo=",
-    "id-rsa.pub": "dmFsdWUtMQ0K"
+    "ssh-privatekey": "dmFsdWUtMg0KDQo="
   }
 }
 ```
@@ -277,7 +302,7 @@ To create a pod that uses an ssh key stored as a secret, we first need to create
 base64 strings.  Newlines are not valid within these strings and must be
 omitted.
 
-Now we can create a pod which references the secret with the ssh key and
+Now we can create a pod which references the secret with the ssh private key and
 consumes it in a volume:
 
 ```json
@@ -318,8 +343,7 @@ consumes it in a volume:
 
 When the container's command runs, the pieces of the key will be available in:
 
-    /etc/secret-volume/id-rsa.pub
-    /etc/secret-volume/id-rsa
+    /etc/secret-volume/ssh-privatekey
 
 The container is then free to use the secret data to establish an ssh connection.
 
@@ -342,6 +366,7 @@ The secrets:
     "metadata": {
       "name": "prod-db-secret"
     },
+    "type" : "kubernetes.io/basic-auth",
     "data": {
       "password": "dmFsdWUtMg0KDQo=",
       "username": "dmFsdWUtMQ0K"
@@ -353,6 +378,7 @@ The secrets:
     "metadata": {
       "name": "test-db-secret"
     },
+    "type" : "kubernetes.io/basic-auth",
     "data": {
       "password": "dmFsdWUtMg0KDQo=",
       "username": "dmFsdWUtMQ0K"
